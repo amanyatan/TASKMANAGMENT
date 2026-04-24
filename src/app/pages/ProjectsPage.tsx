@@ -1,4 +1,4 @@
-import { Plus, LayoutGrid, List as ListIcon, MoreVertical, Calendar, Loader2, Trash2 } from "lucide-react";
+import { Plus, LayoutGrid, List as ListIcon, MoreVertical, Calendar, Loader2, Trash2, ShieldAlert } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { supabase } from "../../lib/supabase";
@@ -19,8 +19,8 @@ export function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteModalProjectId, setDeleteModalProjectId] = useState<string | null>(null);
+  const [role, setRole] = useState<string>("Member");
   
-  // Form state
   const [newProject, setNewProject] = useState({
     name: "",
     description: "",
@@ -29,17 +29,29 @@ export function ProjectsPage() {
   });
 
   useEffect(() => {
-    fetchProjects();
+    fetchProfileAndProjects();
   }, []);
 
-  const fetchProjects = async () => {
+  const fetchProfileAndProjects = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      const currentRole = profile?.role || "Member";
+      setRole(currentRole);
+
+      let query = supabase.from("projects").select("*").order("created_at", { ascending: false });
+
+      if (currentRole === "Member") {
+        // Members only see projects they are assigned to
+        const { data: memberships } = await supabase.from('project_members').select('project_id').eq('user_id', user.id);
+        const pids = (memberships || []).map(m => m.project_id);
+        query = query.in('id', pids);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setProjects(data || []);
     } catch (error: any) {
@@ -51,11 +63,15 @@ export function ProjectsPage() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (role !== "Team Leader") {
+      toast.error("Only Team Leaders can create projects.");
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("projects")
         .insert([{
           name: newProject.name,
@@ -64,36 +80,44 @@ export function ProjectsPage() {
           status: newProject.status,
           owner_id: user.id,
           progress: 0
-        }])
-        .select();
+        }]);
 
       if (error) throw error;
 
       toast.success("Project created successfully!");
       setShowCreateModal(false);
       setNewProject({ name: "", description: "", due_date: "", status: "In Progress" });
-      fetchProjects();
+      fetchProfileAndProjects();
     } catch (error: any) {
       toast.error("Error creating project: " + error.message);
     }
   };
 
   const handleDeleteProject = async (id: string) => {
+    if (role !== "Team Leader") {
+      toast.error("Only Team Leaders can delete projects.");
+      return;
+    }
     try {
-      const { error } = await supabase
-        .from("projects")
-        .delete()
-        .eq("id", id);
-
+      const { error } = await supabase.from("projects").delete().eq("id", id);
       if (error) throw error;
-
       toast.success("Project deleted successfully");
-      fetchProjects();
+      fetchProfileAndProjects();
       setDeleteModalProjectId(null);
     } catch (error: any) {
       toast.error("Error deleting project: " + error.message);
     }
   };
+
+  if (!loading && role === "HR") {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-12 text-center bg-white">
+        <ShieldAlert className="w-20 h-20 text-pink-500 mb-6 opacity-20" />
+        <h2 className="text-2xl font-black uppercase text-neutral-900">Access Denied</h2>
+        <p className="text-neutral-500 mt-2 max-w-xs font-medium">HR access is limited to employee management. Projects are restricted to operational teams.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6 pb-20">
@@ -111,12 +135,14 @@ export function ProjectsPage() {
               <ListIcon className="w-4 h-4" />
             </button>
           </div>
-          <button 
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 bg-neutral-900 dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium rounded-md hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
-          >
-            <Plus className="w-4 h-4" /> New Project
-          </button>
+          {role === "Team Leader" && (
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 bg-neutral-900 dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium rounded-md hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> New Project
+            </button>
+          )}
         </div>
       </div>
 
@@ -127,13 +153,15 @@ export function ProjectsPage() {
         </div>
       ) : projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl">
-          <p className="text-neutral-500 mb-4">No projects found. Create your first project to get started!</p>
-          <button 
-            onClick={() => setShowCreateModal(true)}
-            className="text-blue-500 hover:underline text-sm font-medium"
-          >
-            + Create your first project
-          </button>
+          <p className="text-neutral-500 mb-4">No projects found. {role === "Team Leader" ? "Create your first project to get started!" : "Check back later."}</p>
+          {role === "Team Leader" && (
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              className="text-blue-500 hover:underline text-sm font-medium"
+            >
+              + Create your first project
+            </button>
+          )}
         </div>
       ) : view === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -146,17 +174,19 @@ export function ProjectsPage() {
                     <Calendar className="w-3 h-3" /> Due {project.due_date || "No date"}
                   </div>
                 </div>
-                <button 
-                  className="text-neutral-400 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-md transition-colors" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setDeleteModalProjectId(project.id);
-                  }}
-                  title="Delete Project"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {role === "Team Leader" && (
+                  <button 
+                    className="text-neutral-400 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-md transition-colors" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDeleteModalProjectId(project.id);
+                    }}
+                    title="Delete Project"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               <div className="space-y-2 mb-6">
@@ -198,7 +228,7 @@ export function ProjectsPage() {
                 <th className="px-6 py-3 font-medium">Status</th>
                 <th className="px-6 py-3 font-medium">Progress</th>
                 <th className="px-6 py-3 font-medium">Due Date</th>
-                <th className="px-6 py-3 font-medium text-right">Actions</th>
+                {role === "Team Leader" && <th className="px-6 py-3 font-medium text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -223,24 +253,27 @@ export function ProjectsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-neutral-500">{project.due_date || "N/A"}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      className="text-neutral-400 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-md transition-colors"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setDeleteModalProjectId(project.id);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+                  {role === "Team Leader" && (
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        className="text-neutral-400 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-md transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDeleteModalProjectId(project.id);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
+      )
+}
 
       {/* Create Project Modal */}
       {showCreateModal && (

@@ -2,12 +2,20 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Shield, Users, Crown, User } from "lucide-react";
 import WordRotator from "../components/WordRotator";
+
+const ROLES = [
+  { value: "Manager", label: "Manager", icon: Crown, color: "border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-400", desc: "Strategic control" },
+  { value: "HR", label: "HR", icon: Shield, color: "border-pink-500 bg-pink-500/10 text-pink-700 dark:text-pink-400", desc: "People ops" },
+  { value: "Team Leader", label: "Team Leader", icon: Users, color: "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-400", desc: "Execution power" },
+  { value: "Member", label: "Member", icon: User, color: "border-neutral-500 bg-neutral-500/10 text-neutral-700 dark:text-neutral-400", desc: "Focused work" },
+];
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState("Member");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -24,7 +32,7 @@ export function LoginPage() {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -32,8 +40,20 @@ export function LoginPage() {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success("Successfully signed in");
-        navigate("/app");
+        // Check if user's profile role matches selected role
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profileData && profileData.role !== selectedRole) {
+          toast.error(`Your account role is "${profileData.role}", not "${selectedRole}". Please select the correct role.`);
+          await supabase.auth.signOut();
+        } else {
+          toast.success(`Welcome back! Signed in as ${selectedRole}`);
+          navigate("/app");
+        }
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -59,7 +79,29 @@ export function LoginPage() {
           </div>
 
           <h1 className="text-2xl font-semibold mb-2 tracking-tight">Welcome back</h1>
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-8">Enter your details to sign in to your workspace.</p>
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">Select your role and sign in to your workspace.</p>
+
+          {/* ROLE SELECTOR */}
+          <div className="grid grid-cols-2 gap-2 mb-6">
+            {ROLES.map(r => (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => setSelectedRole(r.value)}
+                className={`flex items-center gap-2.5 p-3 rounded-lg border-2 text-left transition-all ${
+                  selectedRole === r.value 
+                    ? r.color + " border-current" 
+                    : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
+                }`}
+              >
+                <r.icon className="w-4 h-4 shrink-0" />
+                <div>
+                  <span className="text-sm font-medium block">{r.label}</span>
+                  <span className="text-[10px] text-neutral-500 block">{r.desc}</span>
+                </div>
+              </button>
+            ))}
+          </div>
 
           <form className="space-y-4" onSubmit={handleLogin}>
             <div className="space-y-1.5">
@@ -93,7 +135,7 @@ export function LoginPage() {
               disabled={loading}
               className="w-full block text-center bg-neutral-900 dark:bg-white text-white dark:text-black font-medium py-2 rounded-md hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors mt-6 disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Signing in..." : `Sign In as ${selectedRole}`}
             </button>
           </form>
 

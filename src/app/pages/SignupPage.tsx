@@ -2,13 +2,21 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Crown, Shield, Users, User } from "lucide-react";
 import WordRotator from "../components/WordRotator";
+
+const ROLES = [
+  { value: "Manager", label: "Manager", icon: Crown, color: "border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-400", desc: "Strategic control" },
+  { value: "HR", label: "HR", icon: Shield, color: "border-pink-500 bg-pink-500/10 text-pink-700 dark:text-pink-400", desc: "People ops" },
+  { value: "Team Leader", label: "Team Leader", icon: Users, color: "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-400", desc: "Execution power" },
+  { value: "Member", label: "Member", icon: User, color: "border-neutral-500 bg-neutral-500/10 text-neutral-700 dark:text-neutral-400", desc: "Focused work" },
+];
 
 export function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [role, setRole] = useState("Member");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -31,19 +39,30 @@ export function SignupPage() {
         options: {
           data: {
             full_name: name,
+            role: role,
           }
         }
       });
 
       if (error) {
         toast.error(error.message);
-      } else {
-        toast.success("Successfully signed up! You can now log in.");
-        // Sometimes signUp automatically logs you in if email confirmation isn't required
+      } else if (data.user) {
+        // Explicitly create/update the profile row with the role
+        const { error: profileError } = await supabase.from("profiles").upsert({
+          id: data.user.id,
+          full_name: name,
+          role: role,
+        }, { onConflict: "id" });
+
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+        }
+
+        toast.success(`Account created as ${role}! You can now log in.`);
         if (data.session) {
-            navigate("/app");
+          navigate("/app");
         } else {
-            navigate("/login");
+          navigate("/login");
         }
       }
     } catch (error: any) {
@@ -106,13 +125,37 @@ export function SignupPage() {
                 className="w-full px-3 py-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161618] focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white focus:border-transparent transition-all"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Select Your Role</label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {ROLES.map(r => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => setRole(r.value)}
+                    className={`flex items-center gap-2.5 p-3 rounded-lg border-2 text-left transition-all ${
+                      role === r.value 
+                        ? r.color + " border-current" 
+                        : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
+                    }`}
+                  >
+                    <r.icon className="w-4 h-4 shrink-0" />
+                    <div>
+                      <span className="text-sm font-medium block">{r.label}</span>
+                      <span className="text-[10px] text-neutral-500 block">{r.desc}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
             
             <button 
               type="submit" 
               disabled={loading}
               className="w-full block text-center bg-neutral-900 dark:bg-white text-white dark:text-black font-medium py-2 rounded-md hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors mt-6 disabled:opacity-50"
             >
-              {loading ? "Signing up..." : "Sign Up"}
+              {loading ? "Signing up..." : `Sign Up as ${role}`}
             </button>
           </form>
 

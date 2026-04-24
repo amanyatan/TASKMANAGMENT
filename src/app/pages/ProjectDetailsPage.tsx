@@ -1,28 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Plus, MoreHorizontal, MessageSquare, Paperclip, Calendar, ChevronRight } from "lucide-react";
-import { Link } from "react-router";
-
-// --- Mock Data ---
-const initialTasks = [
-  { id: "1", title: "Design System Updates", status: "todo", priority: "high", due: "Oct 24", comments: 3, attachments: 1, assignee: "https://i.pravatar.cc/150?u=1" },
-  { id: "2", title: "API Integration Strategy", status: "todo", priority: "medium", due: "Oct 25", comments: 0, attachments: 0, assignee: "https://i.pravatar.cc/150?u=2" },
-  { id: "3", title: "User Onboarding Flow", status: "in-progress", priority: "high", due: "Oct 22", comments: 5, attachments: 2, assignee: "https://i.pravatar.cc/150?u=3" },
-  { id: "4", title: "Update Documentation", status: "done", priority: "low", due: "Oct 20", comments: 1, attachments: 0, assignee: "https://i.pravatar.cc/150?u=4" },
-];
+import { Plus, MoreHorizontal, Calendar, ChevronRight, Loader2, Users } from "lucide-react";
+import { Link, useParams } from "react-router";
+import { supabase } from "../../lib/supabase";
+import { toast } from "sonner";
 
 const ITEM_TYPE = "TASK";
 
-// --- Components ---
-
-const TaskCard = ({ task, index, moveTask }: { task: any, index: number, moveTask: (id: string, status: string) => void }) => {
+const TaskCard = ({ task, moveTask }: { task: any, moveTask: (id: string, listId: string) => void }) => {
   const [{ isDragging }, dragRef] = useDrag(() => ({
     type: ITEM_TYPE,
     item: { id: task.id },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
   }));
 
   return (
@@ -35,10 +25,10 @@ const TaskCard = ({ task, index, moveTask }: { task: any, index: number, moveTas
       <div className="flex justify-between items-start mb-2">
         <div className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-sm ${
           task.priority === "high" ? "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400" :
-          task.priority === "medium" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400" :
+          task.priority === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" :
           "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
         }`}>
-          {task.priority}
+          {task.priority || "medium"}
         </div>
         <button className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
           <MoreHorizontal className="w-4 h-4" />
@@ -47,42 +37,37 @@ const TaskCard = ({ task, index, moveTask }: { task: any, index: number, moveTas
       <h4 className="text-sm font-medium mb-3 text-neutral-900 dark:text-white">{task.title}</h4>
       <div className="flex items-center justify-between mt-auto">
         <div className="flex items-center gap-3 text-xs text-neutral-500">
-          {task.comments > 0 && (
+          {task.due_date && (
             <div className="flex items-center gap-1">
-              <MessageSquare className="w-3.5 h-3.5" /> {task.comments}
-            </div>
-          )}
-          {task.attachments > 0 && (
-            <div className="flex items-center gap-1">
-              <Paperclip className="w-3.5 h-3.5" /> {task.attachments}
+              <Calendar className="w-3.5 h-3.5" /> {new Date(task.due_date).toLocaleDateString()}
             </div>
           )}
         </div>
-        <img src={task.assignee} alt="Assignee" className="w-6 h-6 rounded-full border border-neutral-200 dark:border-neutral-800" />
+        {task.profiles && (
+          <img src={task.profiles.avatar_url || `https://ui-avatars.com/api/?name=${task.profiles.full_name}&background=random`} alt="Assignee" className="w-6 h-6 rounded-full border border-neutral-200 dark:border-neutral-800" title={task.profiles.full_name} />
+        )}
       </div>
     </div>
   );
 };
 
-const Column = ({ title, status, tasks, moveTask }: { title: string, status: string, tasks: any[], moveTask: (id: string, status: string) => void }) => {
+const Column = ({ list, tasks, moveTask, onAddTask }: { list: any, tasks: any[], moveTask: (id: string, listId: string) => void, onAddTask: (listId: string) => void }) => {
   const [{ isOver }, dropRef] = useDrop(() => ({
     accept: ITEM_TYPE,
-    drop: (item: { id: string }) => moveTask(item.id, status),
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
+    drop: (item: { id: string }) => moveTask(item.id, list.id),
+    collect: (monitor) => ({ isOver: monitor.isOver() }),
   }));
 
   return (
     <div className="flex flex-col w-80 shrink-0">
       <div className="flex items-center justify-between mb-4 px-1">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-sm">{title}</h3>
+          <h3 className="font-semibold text-sm">{list.name}</h3>
           <span className="text-xs text-neutral-500 bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded-full font-medium">
             {tasks.length}
           </span>
         </div>
-        <button className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
+        <button onClick={() => onAddTask(list.id)} className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white">
           <Plus className="w-4 h-4" />
         </button>
       </div>
@@ -92,8 +77,8 @@ const Column = ({ title, status, tasks, moveTask }: { title: string, status: str
           isOver ? "bg-neutral-100 dark:bg-neutral-800/50" : "bg-neutral-50 dark:bg-[#111113] border border-transparent dark:border-neutral-800/30"
         }`}
       >
-        {tasks.map((task, index) => (
-          <TaskCard key={task.id} task={task} index={index} moveTask={moveTask} />
+        {tasks.map((task) => (
+          <TaskCard key={task.id} task={task} moveTask={moveTask} />
         ))}
       </div>
     </div>
@@ -101,18 +86,94 @@ const Column = ({ title, status, tasks, moveTask }: { title: string, status: str
 };
 
 export function ProjectDetailsPage() {
-  const [tasks, setTasks] = useState(initialTasks);
+  const { id: projectId } = useParams();
+  const [project, setProject] = useState<any>(null);
+  const [lists, setLists] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("board");
 
-  const moveTask = (id: string, newStatus: string) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t)));
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [addingTaskToList, setAddingTaskToList] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    if (!projectId) return;
+    setLoading(true);
+    
+    // Fetch Project
+    const { data: pData } = await supabase.from("projects").select("*").eq("id", projectId).single();
+    if (pData) setProject(pData);
+
+    // Fetch Lists
+    const { data: lData } = await supabase.from("project_lists").select("*").eq("project_id", projectId).order("position");
+    if (lData) setLists(lData);
+
+    // Fetch Tasks with Assignees
+    const { data: tData } = await supabase.from("tasks").select("*, profiles:assignee_id(full_name, avatar_url)").eq("project_id", projectId);
+    if (tData) setTasks(tData);
+
+    // Fetch Members
+    const { data: mData } = await supabase.from("project_members").select("*, profiles(full_name, avatar_url, role)").eq("project_id", projectId);
+    if (mData) setMembers(mData);
+
+    setLoading(false);
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const moveTask = async (taskId: string, newListId: string) => {
+    // Optimistic UI update
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, list_id: newListId } : t)));
+    
+    // Database update
+    const { error } = await supabase.from("tasks").update({ list_id: newListId }).eq("id", taskId);
+    if (error) {
+      toast.error("Failed to move task: " + error.message);
+      fetchData(); // Revert on failure
+    }
   };
 
-  const columns = [
-    { id: "todo", title: "To Do" },
-    { id: "in-progress", title: "In Progress" },
-    { id: "done", title: "Done" },
-  ];
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim() || !addingTaskToList || !project) return;
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase.from("tasks").insert({
+      title: newTaskTitle.trim(),
+      project_id: project.id,
+      list_id: addingTaskToList,
+      created_by: user?.id,
+    }).select("*, profiles:assignee_id(full_name, avatar_url)").single();
+
+    if (error) {
+      toast.error("Error creating task: " + error.message);
+    } else if (data) {
+      setTasks((prev) => [...prev, data]);
+      setNewTaskTitle("");
+      setAddingTaskToList(null);
+    }
+  };
+
+  const handleAddList = async () => {
+    const name = prompt("Enter list name:");
+    if (!name || !project) return;
+    
+    const { data, error } = await supabase.from("project_lists").insert({
+      name,
+      project_id: project.id,
+      position: lists.length
+    }).select().single();
+
+    if (error) toast.error("Error creating list: " + error.message);
+    else if (data) setLists((prev) => [...prev, data]);
+  };
+
+  if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  if (!project) return <div className="p-8">Project not found</div>;
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -122,28 +183,35 @@ export function ProjectDetailsPage() {
           <div className="flex items-center text-xs text-neutral-500 mb-4">
             <Link to="/app/projects" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Projects</Link>
             <ChevronRight className="w-3 h-3 mx-1" />
-            <span className="text-neutral-900 dark:text-neutral-300">Website Redesign</span>
+            <span className="text-neutral-900 dark:text-neutral-300">{project.name}</span>
           </div>
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold tracking-tight">Website Redesign</h1>
-              <span className="bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs px-2 py-1 rounded-md font-medium">On Track</span>
+              <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+              <span className={`text-xs px-2 py-1 rounded-md font-medium ${
+                project.status === 'Done' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+              }`}>{project.status}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex -space-x-2 mr-2">
-                {["https://i.pravatar.cc/150?u=1", "https://i.pravatar.cc/150?u=2", "https://i.pravatar.cc/150?u=3"].map((src, i) => (
-                  <img key={i} src={src} className="w-8 h-8 rounded-full border-2 border-white dark:border-[#161618] relative" style={{ zIndex: 3 - i }} />
+              <div className="flex -space-x-2 mr-2" title={`${members.length} members`}>
+                {members.slice(0, 5).map((m, i) => (
+                  <img key={i} src={m.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${m.profiles?.full_name}&background=random`} className="w-8 h-8 rounded-full border-2 border-white dark:border-[#161618] relative" style={{ zIndex: 10 - i }} />
                 ))}
+                {members.length > 5 && (
+                  <div className="w-8 h-8 rounded-full border-2 border-white dark:border-[#161618] bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-xs relative z-0">
+                    +{members.length - 5}
+                  </div>
+                )}
               </div>
               <button className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white px-3 py-1.5 text-sm font-medium rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
-                Share
+                Settings
               </button>
             </div>
           </div>
 
           <div className="flex items-center gap-6 text-sm">
-            {["Board", "List", "Timeline", "Activity"].map((tab) => (
+            {["Board", "Timeline", "Members"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab.toLowerCase())}
@@ -159,24 +227,75 @@ export function ProjectDetailsPage() {
           </div>
         </div>
 
-        {/* Board Area */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden p-8 bg-neutral-50 dark:bg-[#0E0E11]">
-          <div className="flex gap-6 h-full items-start">
-            {columns.map((col) => (
-              <Column
-                key={col.id}
-                title={col.title}
-                status={col.id}
-                tasks={tasks.filter((t) => t.status === col.id)}
-                moveTask={moveTask}
-              />
-            ))}
-            <div className="w-80 shrink-0">
-              <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white transition-colors">
-                <Plus className="w-4 h-4" /> Add Column
-              </button>
+        {/* Content Area */}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden bg-neutral-50 dark:bg-[#0E0E11]">
+          {activeTab === "board" && (
+            <div className="flex gap-6 h-full items-start p-8">
+              {lists.map((list) => (
+                <div key={list.id} className="flex flex-col">
+                  <Column
+                    list={list}
+                    tasks={tasks.filter((t) => t.list_id === list.id)}
+                    moveTask={moveTask}
+                    onAddTask={(listId) => setAddingTaskToList(listId)}
+                  />
+                  {addingTaskToList === list.id && (
+                    <form onSubmit={handleCreateTask} className="mt-2 w-80">
+                      <input 
+                        type="text" 
+                        autoFocus
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        placeholder="Task title..." 
+                        className="w-full px-3 py-2 text-sm rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#1C1C1E]"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button type="submit" className="px-3 py-1 bg-blue-500 text-white text-xs rounded-md">Save</button>
+                        <button type="button" onClick={() => setAddingTaskToList(null)} className="px-3 py-1 bg-neutral-200 dark:bg-neutral-800 text-xs rounded-md">Cancel</button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              ))}
+              <div className="w-80 shrink-0">
+                <button onClick={handleAddList} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white transition-colors">
+                  <Plus className="w-4 h-4" /> Add List
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+          
+          {activeTab === "members" && (
+            <div className="p-8 max-w-4xl mx-auto">
+              <div className="bg-white dark:bg-[#161618] rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
+                  <h3 className="font-semibold">Project Team</h3>
+                  <button className="text-sm bg-neutral-900 dark:bg-white text-white dark:text-black px-3 py-1.5 rounded-md font-medium">Add Member</button>
+                </div>
+                <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {members.length === 0 ? <p className="p-4 text-neutral-500 text-sm">No members added yet.</p> : members.map(m => (
+                    <div key={m.id} className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img src={m.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${m.profiles?.full_name}&background=random`} className="w-10 h-10 rounded-full" />
+                        <div>
+                          <p className="font-medium text-sm">{m.profiles?.full_name}</p>
+                          <p className="text-xs text-neutral-500">{m.profiles?.role}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium px-2 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-md">{m.role_in_project}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "timeline" && (
+            <div className="p-8 flex items-center justify-center text-neutral-500 h-full flex-col gap-4">
+              <Calendar className="w-12 h-12 text-neutral-300 dark:text-neutral-700" />
+              <p>Timeline view is currently visualizing {tasks.length} tasks...</p>
+            </div>
+          )}
         </div>
       </div>
     </DndProvider>

@@ -33,14 +33,14 @@ export function TeamMonitoringPage() {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .order("full_name", { ascending: true });
+        .order("first_name", { ascending: true });
 
       if (error) throw error;
 
       // Map profiles to our display format
       const formattedMembers = (data || []).map(p => ({
         id: p.id,
-        name: p.full_name || p.username || "Unknown Member",
+        name: p.first_name || p.last_name ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : p.username || "Unknown Member",
         email: p.username || "No email",
         role: p.role || "Workspace Member",
         avatar: p.avatar_url,

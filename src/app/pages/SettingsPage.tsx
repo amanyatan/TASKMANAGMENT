@@ -136,7 +136,18 @@ export function SettingsPage() {
       const { error } = await supabase.from("team_members").insert([newMember]);
       if (error) throw error;
 
-      toast.success(`${inviteName || inviteEmail} has been invited!`);
+      // Send the actual invite email via Supabase Edge Function
+      const { error: inviteError } = await supabase.functions.invoke('invite-user', {
+        body: { email: inviteEmail }
+      });
+
+      if (inviteError) {
+        console.error("Invite email send failed:", inviteError);
+        toast.warning("Member added, but failed to send Gmail invite. You can share the link manually.");
+      } else {
+        toast.success(`${inviteName || inviteEmail} has been invited! An email was sent.`);
+      }
+
       setShowInviteModal(false);
       setInviteEmail("");
       setInviteName("");

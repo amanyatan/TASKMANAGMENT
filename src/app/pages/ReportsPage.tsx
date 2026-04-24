@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { Download, Calendar as CalendarIcon } from "lucide-react";
+import { Download, Calendar as CalendarIcon, ShieldAlert } from "lucide-react";
 
 const taskData = [
   { name: "Mon", completed: 12, added: 8 },
@@ -23,6 +25,30 @@ const burndownData = [
 ];
 
 export function ReportsPage() {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        const { data } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+        setProfile(data);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return null;
+
+  if (profile?.role !== "Manager" && profile?.role !== "Team Leader") {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-neutral-50 dark:bg-black">
+        <ShieldAlert className="w-16 h-16 text-red-500 mb-4 opacity-20" />
+        <h1 className="text-2xl font-black uppercase tracking-tighter text-neutral-900 dark:text-white">Access Restricted</h1>
+        <p className="text-neutral-500 max-w-xs mt-2 text-sm font-medium">Strategic analytics are restricted to executive and operational leads only.</p>
+      </div>
+    );
+  }
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

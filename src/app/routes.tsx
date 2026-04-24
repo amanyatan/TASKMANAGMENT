@@ -9,8 +9,8 @@ import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailsPage } from "./pages/ProjectDetailsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { LeaderDashboardPage } from "./pages/LeaderDashboardPage";
 import { TeamMonitoringPage } from "./pages/TeamMonitoringPage";
+import { CommunityPage } from "./pages/CommunityPage";
 
 export const router = createBrowserRouter([
   {
@@ -29,10 +29,11 @@ export const router = createBrowserRouter([
     path: "/app",
     Component: AppLayout,
     children: [
-      { index: true, Component: LeaderDashboardPage },
+      { index: true, Component: DashboardPage },
       { path: "projects", Component: ProjectsPage },
       { path: "projects/:id", Component: ProjectDetailsPage },
       { path: "team", Component: TeamMonitoringPage },
+      { path: "community", Component: CommunityPage },
       { path: "reports", Component: ReportsPage },
       { path: "settings", Component: SettingsPage },
     ],
