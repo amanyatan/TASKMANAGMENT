@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import FancyButton from "../components/FancyButton";
 import LoginButton from "../components/LoginButton";
 import WordRotator from "../components/WordRotator";
+import Pattern from "../components/Pattern";
 
 export function LandingPage() {
   const { theme, setTheme } = useTheme();
@@ -17,64 +18,83 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0E0E11] text-neutral-900 dark:text-neutral-50 font-sans selection:bg-blue-100 dark:selection:bg-blue-900/50">
-      <header className="fixed top-0 w-full z-50 border-b border-neutral-100 dark:border-neutral-800/50 bg-white/80 dark:bg-[#0E0E11]/80 backdrop-blur-md">
+    <div className="min-h-screen relative text-neutral-50 font-sans selection:bg-orange-200/30">
+      {/* Animated Pattern Background */}
+      <Pattern />
+      {/* Dark overlay so text is readable over the pattern */}
+      <div className="fixed inset-0 z-[1] bg-black/60 pointer-events-none" />
+      <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-black/30 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-neutral-900 dark:bg-white flex items-center justify-center">
-              <span className="text-white dark:text-black font-bold text-xs">▲</span>
+            <div className="w-6 h-6 rounded bg-orange-500 flex items-center justify-center">
+              <span className="text-white font-bold text-xs">▲</span>
             </div>
-            <span className="font-semibold tracking-tight">AgileFlow</span>
+            <span className="font-semibold tracking-tight text-white">AgileFlow</span>
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            <a href="#features" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-neutral-900 dark:hover:text-white transition-colors">How it Works</a>
+          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
+            <a href="#features" className="hover:text-white transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-white transition-colors">How it Works</a>
           </div>
           <div className="flex items-center gap-4">
-            {mounted && (
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? (
-                  <Sun className="w-5 h-5 text-neutral-400 hover:text-white" />
-                ) : (
-                  <Moon className="w-5 h-5 text-neutral-500 hover:text-black" />
-                )}
-              </button>
-            )}
             <LoginButton />
-          </div>
         </div>
       </header>
 
       <main>
         {/* Hero */}
-        <section className="pt-32 pb-20 px-6 max-w-7xl mx-auto text-center">
+        <section className="relative z-10 pt-36 pb-24 px-6 max-w-7xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-400 text-xs font-semibold tracking-widest uppercase mb-8"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+            Now Live — Agile for modern teams
+          </motion.div>
+
           <motion.h1 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="text-5xl md:text-7xl font-bold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.1]"
+            className="text-5xl md:text-7xl font-bold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.1] text-white"
           >
-            Master your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500">task management</span> with <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">efficient</span> workflows.
+            Master your{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-400">task management</span>{" "}
+            with{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">efficient</span>{" "}
+            workflows.
           </motion.h1>
           
-          <div className="mb-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="mb-10"
+          >
             <WordRotator />
-          </div>
+          </motion.div>
 
-          <p className="text-lg md:text-xl text-neutral-500 dark:text-neutral-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="text-lg md:text-xl text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed"
+          >
             The minimal, powerful project management tool designed for modern agile teams. Say goodbye to clutter and hello to focus.
-          </p>
-          <div className="flex items-center justify-center">
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex items-center justify-center"
+          >
             <FancyButton />
-          </div>
+          </motion.div>
         </section>
 
         {/* Features */}
-        <section id="features" className="py-24 bg-neutral-50 dark:bg-[#111113] border-y border-neutral-100 dark:border-neutral-800/50">
+        <section id="features" className="relative z-10 py-24 bg-black/40 backdrop-blur-sm border-y border-white/10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -83,8 +103,8 @@ export function LandingPage() {
             className="max-w-7xl mx-auto px-6"
           >
             <div className="mb-16">
-              <h2 className="text-3xl font-bold tracking-tight mb-4">Everything you need to ship.</h2>
-              <p className="text-neutral-500 dark:text-neutral-400">Powerful features wrapped in a beautiful, minimal interface.</p>
+              <h2 className="text-3xl font-bold tracking-tight mb-4 text-white">Everything you need to ship.</h2>
+              <p className="text-white/50">Powerful features wrapped in a beautiful, minimal interface.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               {[
@@ -98,20 +118,20 @@ export function LandingPage() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="bg-white dark:bg-[#161618] p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition-shadow"
+                  className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10 hover:border-orange-500/40 hover:bg-white/10 transition-all group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4">
-                    <f.icon className="w-5 h-5 text-neutral-900 dark:text-white" />
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center mb-4 group-hover:bg-orange-500/30 transition-colors">
+                    <f.icon className="w-5 h-5 text-orange-400" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
-                  <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">{f.desc}</p>
+                  <h3 className="text-lg font-semibold mb-2 text-white">{f.title}</h3>
+                  <p className="text-white/50 text-sm leading-relaxed">{f.desc}</p>
                 </motion.div>
               ))}
             </div>
           </motion.div>
         </section>
         {/* How it Works */}
-        <section id="how-it-works" className="py-24 bg-white dark:bg-[#0E0E11] overflow-hidden">
+        <section id="how-it-works" className="relative z-10 py-24 overflow-hidden">
           <div className="max-w-7xl mx-auto px-6">
             <motion.div 
               initial={{ opacity: 0, x: -50 }}
@@ -120,8 +140,8 @@ export function LandingPage() {
               transition={{ duration: 0.6 }}
               className="text-center mb-20"
             >
-              <h2 className="text-4xl font-bold tracking-tight mb-4">How it Works</h2>
-              <p className="text-neutral-500 dark:text-neutral-400 max-w-2xl mx-auto">Discover our process with a full 360° spin. Hover over each step to learn more.</p>
+              <h2 className="text-4xl font-bold tracking-tight mb-4 text-white">How it Works</h2>
+              <p className="text-white/50 max-w-2xl mx-auto">Discover our process with a full 360° spin. Hover over each step to learn more.</p>
             </motion.div>
             
             <div className="grid md:grid-cols-3 gap-12 relative">
@@ -137,7 +157,7 @@ export function LandingPage() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: i * 0.2 }}
                     whileHover={{ rotateY: 360 }}
-                    className="relative w-full h-full transition-all duration-700 [transform-style:preserve-3d] bg-neutral-50 dark:bg-[#111113] rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-xl overflow-hidden cursor-pointer"
+                    className="relative w-full h-full transition-all duration-700 [transform-style:preserve-3d] bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 shadow-xl overflow-hidden cursor-pointer hover:border-orange-500/40"
                   >
                     {/* Front Face - Number (Visible initially) */}
                     <motion.div 
@@ -151,10 +171,10 @@ export function LandingPage() {
                       whileHover="hover"
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="w-24 h-24 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-black flex items-center justify-center text-3xl font-black mb-6 shadow-2xl">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-yellow-400 text-white flex items-center justify-center text-3xl font-black mb-6 shadow-2xl shadow-orange-500/30">
                         {s.step.split("-")[1]}
                       </div>
-                      <h4 className="text-sm font-black tracking-widest text-blue-500 uppercase">{s.step}</h4>
+                      <h4 className="text-sm font-black tracking-widest text-orange-400 uppercase">{s.step}</h4>
                     </motion.div>
                     
                     {/* Content Layer (Fades in during spin) */}
@@ -181,8 +201,8 @@ export function LandingPage() {
         </section>
       </main>
 
-      <footer className="py-12 border-t border-neutral-100 dark:border-neutral-800/50 text-center">
-        <p className="text-neutral-500 dark:text-neutral-400 text-sm">© 2026 AgileFlow Inc. All rights reserved.</p>
+      <footer className="relative z-10 py-12 border-t border-white/10 text-center">
+        <p className="text-white/40 text-sm">© 2026 AgileFlow Inc. All rights reserved.</p>
       </footer>
     </div>
   );
