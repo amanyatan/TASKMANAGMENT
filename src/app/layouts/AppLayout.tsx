@@ -5,11 +5,13 @@ import { useState, useEffect } from "react";
 import { cn } from "../../lib/utils";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
+import { FullScreenLoader } from "../components/FullScreenLoader";
 
 export function AppLayout() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,6 +24,11 @@ export function AppLayout() {
       } else {
         setUser(session.user);
       }
+      
+      // Artificial delay to show off the beautiful butterfly loader
+      setTimeout(() => {
+        setIsAuthLoading(false);
+      }, 2500);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -51,6 +58,10 @@ export function AppLayout() {
     { name: "Reports", href: "/app/reports", icon: BarChart2 },
     { name: "Settings", href: "/app/settings", icon: Settings },
   ];
+
+  if (isAuthLoading) {
+    return <FullScreenLoader />;
+  }
 
   return (
     <div className="flex h-screen w-full bg-neutral-50 dark:bg-[#0E0E11] text-neutral-900 dark:text-neutral-100 font-sans overflow-hidden">

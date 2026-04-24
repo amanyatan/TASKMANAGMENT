@@ -1,4 +1,4 @@
-import { Plus, LayoutGrid, List as ListIcon, MoreVertical, Calendar, Loader2 } from "lucide-react";
+import { Plus, LayoutGrid, List as ListIcon, MoreVertical, Calendar, Loader2, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { supabase } from "../../lib/supabase";
@@ -18,6 +18,7 @@ export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleteModalProjectId, setDeleteModalProjectId] = useState<string | null>(null);
   
   // Form state
   const [newProject, setNewProject] = useState({
@@ -57,8 +58,11 @@ export function ProjectsPage() {
       const { data, error } = await supabase
         .from("projects")
         .insert([{
-          ...newProject,
-          user_id: user.id,
+          name: newProject.name,
+          description: newProject.description,
+          due_date: newProject.due_date || null,
+          status: newProject.status,
+          owner_id: user.id,
           progress: 0
         }])
         .select();
@@ -71,6 +75,23 @@ export function ProjectsPage() {
       fetchProjects();
     } catch (error: any) {
       toast.error("Error creating project: " + error.message);
+    }
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Project deleted successfully");
+      fetchProjects();
+      setDeleteModalProjectId(null);
+    } catch (error: any) {
+      toast.error("Error deleting project: " + error.message);
     }
   };
 
@@ -125,8 +146,16 @@ export function ProjectsPage() {
                     <Calendar className="w-3 h-3" /> Due {project.due_date || "No date"}
                   </div>
                 </div>
-                <button className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 rounded-md" onClick={(e) => e.preventDefault()}>
-                  <MoreVertical className="w-4 h-4" />
+                <button 
+                  className="text-neutral-400 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-md transition-colors" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDeleteModalProjectId(project.id);
+                  }}
+                  title="Delete Project"
+                >
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
 
@@ -195,8 +224,15 @@ export function ProjectsPage() {
                   </td>
                   <td className="px-6 py-4 text-neutral-500">{project.due_date || "N/A"}</td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 rounded-md">
-                      <MoreVertical className="w-4 h-4" />
+                    <button 
+                      className="text-neutral-400 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-md transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDeleteModalProjectId(project.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -275,6 +311,34 @@ export function ProjectsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalProjectId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#161618] border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <h2 className="text-xl font-bold mb-2">Delete Project</h2>
+              <p className="text-sm text-neutral-500 mb-6">
+                Are you sure you want to delete this project? This action cannot be undone and will permanently remove the project and its data.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setDeleteModalProjectId(null)}
+                  className="flex-1 px-4 py-2 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleDeleteProject(deleteModalProjectId)}
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

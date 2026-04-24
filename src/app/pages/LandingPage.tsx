@@ -52,9 +52,14 @@ export function LandingPage() {
       <main>
         {/* Hero */}
         <section className="pt-32 pb-20 px-6 max-w-7xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.1]">
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="text-5xl md:text-7xl font-bold tracking-tight mb-6 max-w-4xl mx-auto leading-[1.1]"
+          >
             Master your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500">task management</span> with <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">efficient</span> workflows.
-          </h1>
+          </motion.h1>
           
           <div className="mb-10">
             <WordRotator />
