@@ -60,7 +60,17 @@ CREATE TABLE IF NOT EXISTS public.tasks (
   created_at timestamptz DEFAULT now()
 );
 
--- 6. TASK ACTIVITY LOG (For Reporting/Graphs)
+-- 6. MANUAL MEMBERS (Created by Team Leader — no auth account needed)
+CREATE TABLE IF NOT EXISTS public.manual_members (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL,
+  email text,
+  work text,
+  created_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- 7. TASK ACTIVITY LOG (For Reporting/Graphs)
 CREATE TABLE IF NOT EXISTS public.task_activity (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE NOT NULL,
@@ -143,6 +153,7 @@ ALTER TABLE public.project_members DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.project_lists DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_activity DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.manual_members DISABLE ROW LEVEL SECURITY;
 
 -- =========================================================
 -- STORAGE

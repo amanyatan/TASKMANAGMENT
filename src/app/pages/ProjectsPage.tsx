@@ -39,7 +39,7 @@ export function ProjectsPage() {
       if (!user) return;
 
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-      const currentRole = profile?.role || "Member";
+      const currentRole = profile?.role || user.user_metadata?.role || "Member";
       setRole(currentRole);
 
       let query = supabase.from("projects").select("*").order("created_at", { ascending: false });

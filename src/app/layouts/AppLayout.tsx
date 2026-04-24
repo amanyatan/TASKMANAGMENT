@@ -170,14 +170,12 @@ export function AppLayout() {
             <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="hidden md:block p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
               {mounted && (theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />)}
             </button>
-            <div className="hidden md:block h-4 w-px bg-neutral-200 dark:bg-neutral-800 mx-2" />
             <button onClick={() => navigate('/app/settings')} className="p-1 md:hidden ml-1">
               <img 
                 src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${profile?.full_name || 'U'}&background=random`} 
                 className="w-7 h-7 rounded-full border border-neutral-200 dark:border-neutral-700 object-cover"
               />
             </button>
-            <Settings className="hidden md:block w-4 h-4 text-neutral-500 cursor-pointer hover:text-neutral-900 dark:hover:text-white" />
           </div>
         </header>
 
