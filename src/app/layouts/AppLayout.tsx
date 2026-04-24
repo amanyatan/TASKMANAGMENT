@@ -64,11 +64,11 @@ export function AppLayout() {
 
   // Navigation Items with Role-Based Visibility
   const allNavItems = [
-    { name: "Dashboard", href: "/app", icon: LayoutDashboard, roles: ["Manager", "HR", "Team Leader", "Member"] },
+    { name: "Dashboard", href: "/app", icon: LayoutDashboard, roles: ["HR", "Team Leader", "Member"] },
     { name: "Projects", href: "/app/projects", icon: Briefcase, roles: ["Manager", "Team Leader", "Member"] },
     { name: "Team", href: "/app/team", icon: Users, roles: ["Manager", "HR", "Team Leader"] },
     { name: "Reports", href: "/app/reports", icon: BarChart2, roles: ["Manager", "Team Leader"] },
-    { name: "Community", href: "/app/community", icon: MessageSquare, roles: ["HR", "Team Leader", "Member"] },
+    { name: "Community", href: "/app/community", icon: MessageSquare, roles: ["Manager", "HR", "Team Leader", "Member"] },
     { name: "Settings", href: "/app/settings", icon: Settings, roles: ["Manager", "HR", "Team Leader", "Member"] },
   ];
 
